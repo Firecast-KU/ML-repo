@@ -1,14 +1,16 @@
+# src/core/weather_daily.py
+
 import glob
 import os
 from typing import List, Optional
 
-import geopandas as gpd
 import pandas as pd
 
-from paths import PROC_DIR, WEATHER_RAW_DIR
+from src.config.paths import PROC_DIR, WEATHER_RAW_DIR
 
 
 def pick_column(columns: List[str], candidates: List[str]) -> Optional[str]:
+    """컬럼 리스트에서 candidates 중 하나와 case-insensitive 매칭되는 컬럼 찾기"""
     lower_map = {c.lower(): c for c in columns}
     for cand in candidates:
         if cand.lower() in lower_map:
@@ -16,30 +18,8 @@ def pick_column(columns: List[str], candidates: List[str]) -> Optional[str]:
     return None
 
 
-def load_fires_with_station():
-    fire_proc_path = PROC_DIR / "fires_with_manual_station.parquet"
-    fires = gpd.read_parquet(fire_proc_path)
-    print("fires shape:", fires.shape)
-    print("fires columns:", list(fires.columns))
-
-    # fire_date 생성
-    if "OCCRR_DATE" in fires.columns:
-        fires["fire_date"] = pd.to_datetime(fires["OCCRR_DATE"])
-    elif "OCCRR_DTM" in fires.columns:
-        fires["OCCRR_DATE_STR"] = fires["OCCRR_DTM"].astype("string").str.slice(0, 8)
-        fires["fire_date"] = pd.to_datetime(
-            fires["OCCRR_DATE_STR"], format="%Y%m%d", errors="coerce"
-        )
-    else:
-        raise ValueError(
-            "산불 데이터에서 날짜 컬럼(OCCRR_DATE / OCCRR_DTM)을 찾을 수 없습니다."
-        )
-
-    fires["fire_date"] = fires["fire_date"].dt.normalize()
-    return fires
-
-
-def load_weather_raw():
+def load_weather_raw() -> pd.DataFrame:
+    """raw weather CSV들을 전부 읽어서 하나의 DataFrame으로 병합"""
     csv_paths = sorted(glob.glob(os.path.join(str(WEATHER_RAW_DIR), "*.csv")))
     print("weather files:", [os.path.basename(p) for p in csv_paths])
 
@@ -59,6 +39,7 @@ def load_weather_raw():
 
 
 def preprocess_weather(weather_raw: pd.DataFrame) -> pd.DataFrame:
+    """raw weather → station_id + obs_date + (TA, TMN, TMX, RN) 형태의 daily 데이터로 축약"""
     stn_col = pick_column(weather_raw.columns, ["STN", "stn", "stnid", "지점", "지점번호"])
     date_col = pick_column(
         weather_raw.columns, ["TM", "날짜", "date", "YYYYMMDD", "일시"]
@@ -99,6 +80,7 @@ def preprocess_weather(weather_raw: pd.DataFrame) -> pd.DataFrame:
     ]
     weather = weather_raw[keep_cols].copy()
 
+    # 컬럼 이름 표준화
     rename_map = {
         stn_col: "station_id",
         date_col: "obs_datetime",
@@ -127,13 +109,14 @@ def preprocess_weather(weather_raw: pd.DataFrame) -> pd.DataFrame:
     weather["obs_date"] = weather["obs_datetime"].astype("string").map(parse_obs_date)
     weather["obs_date"] = weather["obs_date"].dt.normalize()
 
-    # target station만
+    # target station만 (104: 북강릉, 105: 강릉)
     target_stations = [104, 105]
     weather["station_id"] = pd.to_numeric(weather["station_id"], errors="coerce")
     w_sub = weather[
         weather["station_id"].isin(target_stations) & weather["obs_date"].notna()
         ].copy()
 
+    # 일 단위로 집계
     agg_dict = {}
     for col in ["TA", "TMN", "TMX", "RN"]:
         if col in w_sub.columns:
@@ -145,22 +128,8 @@ def preprocess_weather(weather_raw: pd.DataFrame) -> pd.DataFrame:
     return weather_daily
 
 
-def merge_fire_weather(fires: gpd.GeoDataFrame, weather_daily: pd.DataFrame):
-    fires["station_id"] = pd.to_numeric(fires["station_id"], errors="coerce")
-
-    fires_for_join = fires.copy().rename(columns={"fire_date": "date"})
-    weather_for_join = weather_daily.rename(columns={"obs_date": "date"})
-
-    merged = fires_for_join.merge(
-        weather_for_join,
-        how="left",
-        on=["station_id", "date"],
-        suffixes=("", "_w"),
-    )
-    return merged
-
-
 def build_past_n_days_features(df: pd.DataFrame, n_days: int = 3) -> pd.DataFrame:
+    """station_id+date 기준으로 과거 n일치 기상 피처를 옆으로 붙이는 함수"""
     base_cols = ["station_id", "date"]
     feature_cols = [c for c in df.columns if c not in base_cols]
 
@@ -174,25 +143,22 @@ def build_past_n_days_features(df: pd.DataFrame, n_days: int = 3) -> pd.DataFram
     return out
 
 
-def main():
-    fires = load_fires_with_station()
+def normalize_weather_daily() -> pd.DataFrame:
+    """raw CSV → 정규화된 weather_daily.parquet 저장"""
     weather_raw = load_weather_raw()
     weather_daily = preprocess_weather(weather_raw)
 
-    merged = merge_fire_weather(fires, weather_daily)
-    out_path_parquet = PROC_DIR / "fire_weather_merged.parquet"
-    out_path_csv = PROC_DIR / "fire_weather_merged.csv"
-    merged.to_parquet(out_path_parquet, index=False)
-    merged.to_csv(out_path_csv, index=False)
-    print("saved ->", out_path_parquet)
-    print("saved ->", out_path_csv)
+    # 컬럼 이름 통일: obs_date -> date
+    weather_daily = weather_daily.rename(columns={"obs_date": "date"})
 
-    weather_daily_for_features = weather_daily.rename(columns={"obs_date": "date"})
-    weather_features_3d = build_past_n_days_features(weather_daily_for_features, n_days=3)
-    print("weather_features_3d shape:", weather_features_3d.shape)
-    # 필요하면 여기서도 저장 가능
-    # weather_features_3d.to_parquet(PROC_DIR / "weather_features_3d.parquet", index=False)
+    # 타입 강제
+    weather_daily["station_id"] = (
+        pd.to_numeric(weather_daily["station_id"], errors="coerce").astype("Int64")
+    )
+    weather_daily["date"] = pd.to_datetime(weather_daily["date"]).dt.normalize()
 
+    out_path = PROC_DIR / "weather_daily.parquet"
+    weather_daily.to_parquet(out_path, index=False)
+    print("saved normalized weather_daily ->", out_path)
 
-if __name__ == "__main__":
-    main()
+    return weather_daily

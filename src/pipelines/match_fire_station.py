@@ -3,8 +3,8 @@ import os
 
 import geopandas as gpd
 
-from paths import FIRE_RAW_DIR, PROC_DIR
-from stations import (
+from src.config.paths import FIRE_RAW_DIR, PROC_DIR
+from src.core.stations import (
     WeatherStationRegistry,
     attach_nearest_station,
 )

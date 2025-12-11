@@ -4,7 +4,7 @@ import os
 import geopandas as gpd
 import pandas as pd
 
-from paths import FIRE_RAW_DIR, WEATHER_RAW_DIR
+from src.config.paths import FIRE_RAW_DIR
 
 
 def load_fire_shapefile():
@@ -59,7 +59,7 @@ def quick_fire_stats(fires: gpd.GeoDataFrame):
 
 
 def inspect_weather_csv_meta():
-    from paths import WEATHER_RAW_DIR
+    from src.config.paths import WEATHER_RAW_DIR
 
     def pick(cols, candidates):
         cols_low = {c.lower(): c for c in cols}

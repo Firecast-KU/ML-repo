@@ -1,6 +1,6 @@
 import geopandas as gpd
 
-from paths import FIRE_RAW_DIR
+from src.config.paths import FIRE_RAW_DIR
 
 
 def load_gangneung_fires():

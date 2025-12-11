@@ -157,6 +157,11 @@ def normalize_weather_daily() -> pd.DataFrame:
     )
     weather_daily["date"] = pd.to_datetime(weather_daily["date"]).dt.normalize()
 
+    # RN이 있는 경우에만 빈값을 0으로 처리
+    if "RN" in weather_daily.columns:
+        weather_daily["RN"] = weather_daily["RN"].fillna(0.0)
+
+
     out_path = PROC_DIR / "weather_daily.parquet"
     weather_daily.to_parquet(out_path, index=False)
     print("saved normalized weather_daily ->", out_path)

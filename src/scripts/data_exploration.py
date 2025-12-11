@@ -59,7 +59,7 @@ def quick_fire_stats(fires: gpd.GeoDataFrame):
 
 
 def inspect_weather_csv_meta():
-    from firecast.scripts.paths import WEATHER_RAW_DIR
+    from paths import WEATHER_RAW_DIR
 
     def pick(cols, candidates):
         cols_low = {c.lower(): c for c in cols}

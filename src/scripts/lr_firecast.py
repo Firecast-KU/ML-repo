@@ -1,4 +1,3 @@
-# firecast/scripts/lr_firecast.py
 import geopandas as gpd
 
 from paths import FIRE_RAW_DIR

@@ -1,4 +1,3 @@
-# firecast/scripts/paths.py
 from pathlib import Path
 
 # firecast/ 폴더 기준 루트

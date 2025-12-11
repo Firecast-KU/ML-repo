@@ -1,11 +1,10 @@
-# firecast/scripts/data_exploration.py
 import glob
 import os
 
 import geopandas as gpd
 import pandas as pd
 
-from firecast.scripts.paths import FIRE_RAW_DIR, WEATHER_RAW_DIR
+from paths import FIRE_RAW_DIR, WEATHER_RAW_DIR
 
 
 def load_fire_shapefile():

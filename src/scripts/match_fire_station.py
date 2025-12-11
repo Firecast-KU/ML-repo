@@ -1,11 +1,10 @@
-# firecast/scripts/match_fire_station.py
 import glob
 import os
 
 import geopandas as gpd
 
-from firecast.scripts.paths import FIRE_RAW_DIR, PROC_DIR
-from firecast.scripts.stations import (
+from paths import FIRE_RAW_DIR, PROC_DIR
+from stations import (
     WeatherStationRegistry,
     attach_nearest_station,
 )

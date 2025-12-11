@@ -1,4 +1,3 @@
-# firecast/scripts/join_fire_weather.py
 import glob
 import os
 from typing import List, Optional

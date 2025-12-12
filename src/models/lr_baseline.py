@@ -4,6 +4,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, roc_auc_score
 from src.config.paths import PROC_DIR
 
+import numpy as np
+
 def run_lr_baseline():
 
     df = pd.read_parquet(PROC_DIR / "weather_labeled.parquet")
@@ -33,6 +35,12 @@ def run_lr_baseline():
     print(classification_report(y_test, y_pred))
 
     print("ROC-AUC:", roc_auc_score(y_test, y_prob))
+
+    coef = model.coef_[0]
+    for name, w in sorted(zip(feature_cols, coef), key=lambda x: abs(x[1]), reverse=True):
+        print(f"{name:>4}: {w:+.4f}")
+    print("intercept:", model.intercept_[0])
+
 
     return model
 

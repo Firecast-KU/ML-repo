@@ -5,6 +5,8 @@ import geopandas as gpd
 import pandas as pd
 
 from src.config.paths import FIRE_RAW_DIR
+from src.core.fire_events import normalize_fire_events
+from src.core.weather_daily import normalize_weather_daily
 
 
 def load_fire_shapefile():
@@ -96,11 +98,32 @@ def inspect_weather_csv_meta():
     print(meta_df)
 
 
+pd.set_option("display.max_columns", 200)
+pd.set_option("display.width", 200)
+
+def show_df(name: str, df: pd.DataFrame, n=5):
+    print(f"\n===== {name} =====")
+    print("shape:", df.shape)
+    print("columns:", list(df.columns))
+    print("\n--- dtypes ---")
+    print(df.dtypes)
+    print("\n--- head ---")
+    print(df.head(n))
+    print("\n--- missing rate(top) ---")
+    miss = (df.isna().mean().sort_values(ascending=False) * 100).round(2)
+    print(miss[miss > 0].head(30))
+
+
 def main():
-    fires = load_fire_shapefile()
-    fires = add_year_month(fires)
-    quick_fire_stats(fires)
-    inspect_weather_csv_meta()
+    # fires = load_fire_shapefile()
+    # fires = add_year_month(fires)
+    # quick_fire_stats(fires)
+    # inspect_weather_csv_meta()
+    fire_df = normalize_fire_events()
+    weather_df = normalize_weather_daily()
+
+    show_df("fire_events (normalized)", fire_df)
+    show_df("weather_daily (normalized)", weather_df)
 
 
 if __name__ == "__main__":

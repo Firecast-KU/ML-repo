@@ -19,6 +19,10 @@ def build_labels():
     # NaN → 0 (산불 없음)
     df["fire_label"] = df["fire_label"].fillna(0).astype(int)
 
+    # DTR Feature 추가
+    if {"TMX", "TMN"}.issubset(df.columns):
+        df["DTR"] = df["TMX"] - df["TMN"]
+
     out = PROC_DIR / "weather_labeled.parquet"
     df.to_parquet(out, index=False)
     print("saved labeled dataset ->", out)

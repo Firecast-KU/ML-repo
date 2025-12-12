@@ -11,7 +11,7 @@ def run_lr_baseline():
     df = pd.read_parquet(PROC_DIR / "weather_labeled.parquet")
 
     # Feature & Label 선택
-    feature_cols = ["TA", "TMN", "TMX", "RN"]
+    feature_cols = ["TA", "TMN", "TMX", "RN", "DTR"]
     X = df[feature_cols]
     y = df["fire_label"]
 

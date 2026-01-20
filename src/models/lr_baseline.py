@@ -16,9 +16,22 @@ def run_lr_baseline():
     y = df["fire_label"]
 
     # Train/Test 분할
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
+    # X_train, X_test, y_train, y_test = train_test_split(
+    #     X, y, test_size=0.2, random_state=42, stratify=y
+    # )
+
+    #time split
+    df["date"] = pd.to_datetime(df["date"])
+
+    # 연도기준 분할은 test의 개수가 너무 적어질 것 같다..
+    train_df = df[df["date"].dt.year < 2021]
+    test_df  = df[df["date"].dt.year >= 2021]
+
+    X_train = train_df[feature_cols]
+    y_train = train_df["fire_label"]
+    X_test  = test_df[feature_cols]
+    y_test  = test_df["fire_label"]
+
 
     # Logistic Regression + 클래스 불균형 보정
     model = LogisticRegression(

@@ -2,6 +2,16 @@ import geopandas as gpd
 
 from src.config.paths import FIRE_RAW_DIR
 
+"""
+[EDA / INSPECTION SCRIPT]
+
+- 산불 발생 shapefile 구조 확인
+- CRS, 컬럼, bounds sanity check
+- 특정 지역(강릉시) subset 테스트
+
+※ 모델 학습/예측 파이프라인과는 무관
+※ 데이터 변경 시 검증용으로만 사용
+"""
 
 def load_gangneung_fires():
     shp_path = FIRE_RAW_DIR / "TB_FFAS_FF_OCCRR_42.shp"

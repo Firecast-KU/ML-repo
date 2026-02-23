@@ -14,6 +14,8 @@ WEATHER_RAW_DIR = RAW_DIR / "weather"
 
 TRAIN_TEST_DIR = FEAT_DIR / "train_test_split"
 
+MODEL_DIR = ROOT / "models"
+
 # 필요한 디렉토리는 미리 만들어두기
 PROC_DIR.mkdir(parents=True, exist_ok=True)
 FEAT_DIR.mkdir(parents=True, exist_ok=True)

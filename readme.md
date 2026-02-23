@@ -25,7 +25,8 @@ firecast/
 │ │
 │ ├── eda/ # 탐색적 데이터 분석
 │ │ ├── init.py
-│ │ └── data_exploration.py
+│ │ ├── data_exploration.py
+│ │ └── inspect_fire_gangneung.py
 │ │
 │ ├── pipelines/ # 재현 가능한 데이터 파이프라인
 │ │ ├── init.py
@@ -33,10 +34,17 @@ firecast/
 │ │ ├── match_fire_station.py
 │ │ └── merge_fire_weather.py
 │ │
-│ ├── models/ # 모델 학습 코드
+│ ├── experiments/ # 초기/레거시 모델 실험 코드
 │ │ ├── init.py
-│ │ ├── lr_baseline.py # Logistic Regression baseline
-│ │ └── lr_firecast.py # Firecast 실험 모델
+│ │ └── lr_baseline_legacy.py
+│ │
+│ ├── models/ # 모델 학습·평가·예측 로직
+│ │ ├── init.py
+│ │ ├── train_base_model.py # 베이스 모델 학습 + 저장
+│ │ ├── evaluate.py # time split 기반 성능 평가
+│ │ ├── predict_daily_base.py # 특정 날짜 예측 (서빙용)
+│ │ ├── base_lr.joblib # 저장된 모델 아티팩트
+│ │ └── base_lr_meta.json # 학습 메타데이터
 │ │
 │ └── validation/ # 데이터 및 결과 검증
 │ ├── init.py
@@ -124,21 +132,19 @@ firecast/
 
 ## 🤖 Modeling
 
-### Baseline Model
+### Base Model (일 단위 예측)
 - **Logistic Regression**
+- Time-based split 적용 (최근 N일 holdout)
 - 클래스 불균형 고려 (Recall 중심 평가)
 
-→ `models/lr_baseline.py`  
-→ `models/lr_firecast.py`
-
-**입력 Feature 예시**
-- 기온
-- 강수량
-- 습도
-- 풍속
+#### 역할 분리
+- 학습: `models/train_base_model.py`
+- 평가: `models/evaluate.py`
+- 예측(서빙): `models/predict_daily_base.py`
 
 **출력**
-- 산불 발생 확률 (Binary Classification)
+- 날짜별·관측소별 산불 위험 확률
+- 위험도 레벨 (LOW / MODERATE / HIGH / EXTREME)
 
 ---
 
@@ -177,4 +183,7 @@ firecast/
 - 시계열 기반 모델 (LSTM / Transformer)
 - 공간적 특성 반영 (Grid / Spatial Encoding)
 - 기상 예보 데이터 기반 **미래 산불 위험도 예측**
-
+- 비선형 모델(RandomForest / XGBoost) 고도화
+- **일 단위 예측 + 3시간 단위 위험도 갱신 구조**
+- 관측 기반 Δ feature 보정 모델
+- 기상 예보 데이터 활용한 선제적 위험 예측

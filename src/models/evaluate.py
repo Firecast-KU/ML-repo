@@ -4,12 +4,20 @@ from datetime import datetime
 import joblib
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import average_precision_score, roc_auc_score
 
-from src.config.paths import PROC_DIR, MODEL_DIR
+from src.config.paths import MODEL_DIR, PROC_DIR
 
 
-FEATURES = ["TA", "TMN", "TMX", "RN", "DTR"]
+FEATURES = [
+    "TA_mean",
+    # "TA_dtr",  # temporarily excluded (diurnal temperature range)
+    "POP",
+    "is_precip",
+    "WD_sin",
+    "WD_cos",
+    "SKY",
+]
 LABEL = "fire_label"
 
 MODEL_NAME = "base_lr.joblib"
@@ -17,10 +25,7 @@ META_NAME = "base_lr_meta.json"
 
 
 def time_split_holdout(df: pd.DataFrame, holdout_days: int = 90):
-    """
-    최근 holdout_days일을 테스트로 두는 time-based holdout split.
-    연도 기준 split에서 test가 너무 적어지는 문제를 완화하기 위함.
-    """
+    """Time-based holdout split using the latest N days as test."""
     df = df.sort_values(["date"]).reset_index(drop=True)
     cutoff = df["date"].max() - pd.Timedelta(days=holdout_days)
     train_df = df[df["date"] < cutoff]
@@ -32,10 +37,13 @@ def train_and_save(holdout_days: int = 90):
     df = pd.read_parquet(PROC_DIR / "weather_labeled.parquet")
     df["date"] = pd.to_datetime(df["date"])
 
-    # DTR이 parquet에 이미 있을 수도 있지만, 안전하게 재계산
-    df["DTR"] = df["TMX"] - df["TMN"]
+    # Numeric safety for model input.
+    for col in FEATURES:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # Time split (holdout)
+    df = df.dropna(subset=FEATURES + [LABEL])
+
     train_df, test_df, cutoff = time_split_holdout(df, holdout_days=holdout_days)
 
     X_train = train_df[FEATURES]
@@ -46,7 +54,6 @@ def train_and_save(holdout_days: int = 90):
     model = LogisticRegression(class_weight="balanced", max_iter=500)
     model.fit(X_train, y_train)
 
-    # quick metrics (학습 직후 sanity check)
     y_prob = model.predict_proba(X_test)[:, 1]
     roc = roc_auc_score(y_test, y_prob) if len(set(y_test)) > 1 else None
     pr = average_precision_score(y_test, y_prob) if len(set(y_test)) > 1 else None
@@ -78,8 +85,8 @@ def train_and_save(holdout_days: int = 90):
     meta_path = MODEL_DIR / META_NAME
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    print(f"✅ Model saved: {model_path}")
-    print(f"✅ Meta saved : {meta_path}")
+    print(f"Model saved: {model_path}")
+    print(f"Meta saved : {meta_path}")
     print(f"Holdout cutoff date: {cutoff.date()}")
     print(f"Quick ROC-AUC: {roc}")
     print(f"Quick PR-AUC : {pr}")
@@ -88,5 +95,4 @@ def train_and_save(holdout_days: int = 90):
 
 
 if __name__ == "__main__":
-    # 필요하면 숫자만 바꿔서 테스트 기간을 조정하면 됨 (예: 60/90/120일)
     train_and_save(holdout_days=90)

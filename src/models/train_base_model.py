@@ -6,7 +6,7 @@ from src.config.paths import PROC_DIR
 
 
 FEATURES = [
-    "TA_mean",
+    "TA",
     # "TA_dtr",  # temporarily excluded (diurnal temperature range)
     "POP",
     "is_precip",

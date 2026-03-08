@@ -86,7 +86,7 @@ def preprocess_weather(weather_raw: pd.DataFrame) -> pd.DataFrame:
 
     Output columns:
     - station_id, date
-    - TA_mean: mean TA at 00/12
+    - TA: mean TA at 00/12
     - TA_dtr: |TA(12)-TA(00)| proxy (implemented as max-min across 00/12)
     - POP: mean precipitation probability at 00/12
     - is_precip: max precipitation indicator at 00/12
@@ -154,9 +154,9 @@ def preprocess_weather(weather_raw: pd.DataFrame) -> pd.DataFrame:
     weather_daily = w_0012[keys].drop_duplicates().sort_values(keys).reset_index(drop=True)
 
     if "TA" in w_0012.columns:
-        ta_mean = w_0012.groupby(keys, as_index=False)["TA"].mean().rename(columns={"TA": "TA_mean"})
+        ta_daily = w_0012.groupby(keys, as_index=False)["TA"].mean()
         ta_dtr = w_0012.groupby(keys, as_index=False)["TA"].agg(_dtr_0012).rename(columns={"TA": "TA_dtr"})
-        weather_daily = weather_daily.merge(ta_mean, on=keys, how="left")
+        weather_daily = weather_daily.merge(ta_daily, on=keys, how="left")
         weather_daily = weather_daily.merge(ta_dtr, on=keys, how="left")
 
     if "POP" in w_0012.columns:
